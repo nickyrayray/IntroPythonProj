@@ -45,6 +45,7 @@ class StatMove(NormalMove):
             pokemonT.defense = pokemonT.defense - self.amount;
             if pokemonT.defense < 0:
                 pokemonT.defense = 0;
+        print "%s used %s." % (pokemonA.name, self.name);
     
     def __str__(self):
         s = "Name: " + self.name + "\t";
@@ -89,6 +90,7 @@ class SpecMove(NormalMove):
         if damage < 0:
             damage = 1;
         pokemonD.health = pokemonD.health - damage;
+        print "%s used %s." % (pokemonA.name, self.name);
     
     def __str__(self):
         s = "Name: " + self.name + "\t";

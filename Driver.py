@@ -60,7 +60,7 @@ class Game:
                 print "Invalid Choice!";
     
     def displayStatus(self):
-        opp_string = "Opponent: \n";
+        opp_string = "Opponent: " + self.opp.name + "\n";
         opp_string += "Number of remaining Pokemon: " + str(len(self.opp.pokemon)-1) + "\n";
         opp_string += "Current Pokemon: " + self.opp.currentPokemon.opp_display_str() + "\n";
         s = "Battle Summary: \n\n" + opp_string + "\n";
@@ -185,26 +185,167 @@ class NetworkedGame(Game):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
     
     def initiate_connection(self, IP, port):
-        self.socket.connect(IP, port);
+        self.socket.connect((IP, port));
     
     def wait_for_connection(self, port):
-        self.socket.bind(self.socket.gethostname(), port);
+        self.socket.bind(('', port));
         self.socket.listen(3);
         (self.socket, address) = self.socket.accept();
     
     def get_initial_player_info(self):
-        bufsize = 
+        
+        s = self.my_recv();
+        
+        sl = s.split('\n');
+        
+        self.opp = Player.Player(sl[1]);
+        for i in range(1, len(sl)-1):
+            self.opp.addPokemon(copy.deepcopy(pokemon[sl[i]]));
+        self.opp.choosePokemon(sl[len(sl)-1]);
     
-    def compose_message(self):
-        return;
+    def my_recv(self):
+        bufsize = 4096;
+        recv_str = "";
+        while True:
+            s = self.socket.recv(bufsize);
+            recv_str += s;
+            if len(s) != bufsize:
+                break;
+        return recv_str;
+    
+    def my_send(self, msg):
+        sent = 0;
+        while sent < len(msg):
+            num_sent = self.socket.send(msg);
+            sent += num_sent;
+    
+    def compose_initial_message(self):
+        send_str = self.player.name + "\n";
+        for i in range(0, len(self.player.pokemon)):
+            send_str += self.player.pokemon[i].name + "\n";
+        send_str += self.player.currentPokemon.name;
+        return send_str;
+    
+    def setup(self):
+        self.getPlayerInfo();
+        self.selectPokemon();
+        self.chooseFirstPokemon();
+        self.my_send(self.compose_initial_message());
+        self.get_initial_player_info();
+    
+    def send_move(self, move):
+        send_str = "Attack\n" + move;
+        self.my_send(send_str);
+    
+    def send_switch(self, pokemon_switch):
+        send_str = "Switch\n";
+        send_str += pokemon_switch;
+        self.my_send(send_str);
+    
+    def recv_switch(self):
+        s = self.my_recv();
+        sl = s.split("\n");
+        string = self.opp.currentPokemon.name + " has fainted.\n";
+        string += self.opp.name + " switches to " + sl[1];
+        print string;
+        self.opp.choosePokemon(sl[1]);
+        
+    def evaluatePlayerChoice(self, player_choice):
+        if player_choice in self.player.currentPokemon.moves:
+            self.player.currentPokemon.useMove(self.opp.currentPokemon, player_choice);
+        else:
+            s = self.player.name + " switched " + self.player.currentPokemon.name + " for ";
+            self.player.choosePokemon(player_choice);
+            s += self.player.currentPokemon.name;
+            print s;
+    
+    def evaluateEngagement(self, player_choice):
+        if player_choice in self.player.currentPokemon.moves:
+            self.send_move(player_choice);
+        elif self.player.pokemon_in_list(player_choice):
+            self.send_switch(player_choice);
+        else:
+            return False;
+        
+        s = self.my_recv();
+        sl = s.split('\n');
+
+        choice = sl[0];        
+        
+        print "Turn Summary: ";
+        
+        if choice == "Switch":
+            s_opp = self.opp.name + " switches " + self.opp.currentPokemon.name + " for ";
+            self.opp.choosePokemon(sl[1]);
+            s_opp += self.opp.currentPokemon.name + ".";
+            print s_opp;
+            self.evaluatePlayerChoice(player_choice);
+            if(self.opp.currentPokemon.isDead()):
+                return True;
+        elif choice == "Attack" and player_choice in self.player.currentPokemon.moves:
+            if (self.opp.currentPokemon.health < self.player.currentPokemon.health):
+                self.opp.currentPokemon.useMove(self.player.currentPokemon, sl[1]);
+                if self.player.currentPokemon.isDead():
+                    return True;
+                self.player.currentPokemon.useMove(self.opp.currentPokemon, player_choice);
+            elif self.opp.currentPokemon.health > self.player.currentPokemon.health:
+                self.player.currentPokemon.useMove(self.opp.currentPokemon, player_choice);
+                if self.opp.currentPokemon.isDead():
+                    return True;
+                self.opp.currentPokemon.useMove(self.player.currentPokemon, sl[1]);
+            else:
+                if(self.player.name < self.opp.name):
+                    self.player.currentPokemon.useMove(self.opp.currentPokemon, player_choice);
+                    if self.opp.currentPokemon.isDead():
+                        return True;
+                    self.opp.currentPokemon.useMove(self.player.currentPokemon, sl[1]);
+                elif self.player.name > self.opp.name:
+                    self.opp.currentPokemon.useMove(self.player.currentPokemon, sl[1]);
+                    if self.player.currentPokemon.isDead():
+                        return True;
+                    self.player.currentPokemon.useMove(self.opp.currentPokemon, player_choice);
+                else:
+                    raise Exception("Players indistinguishable");
+        else:
+            self.player.choosePokemon(player_choice);
+            self.opp.currentPokemon.useMove(self.player.currentPokemon, sl[1]);
+                
+        return True;
+        
+    def deal_with_loss(self):
+        s = self.player.currentPokemon.name + " has fainted. You are out of usable Pokemon. You have lost.";
+        self.socket.close();
+        print s;
+        
+    def deal_with_win(self):
+        s = "Enemy " + self.opp.currentPokemon.name + " has fainted. " + self.opp.name + " is out of usable Pokemon. You win!";
+        self.socket.close();
+        print s;
     
     def run_main_loop(self):
-        self.chooseFirstPokemon();
-        
+        self.setup();
+        while True:
+            self.displayStatus();
+            choice = raw_input("Your choice: ");
+            print;
+            if not self.evaluateEngagement(choice):
+                print "Invalid choice! Select again!";
+            else:
+                if(self.player.currentPokemon.isDead() and self.player.check_has_remaining_pokemon()):
+                    self.choose_next_pokemon(self.player.currentPokemon);
+                    self.send_switch(self.player.currentPokemon);
+                elif (self.player.currentPokemon.isDead() and not self.player.check_has_remaining_pokemon()):
+                    self.deal_with_loss();
+                    break;
+                elif (self.opp.currentPokemon.isDead() and self.opp.check_has_remaining_pokemon()):
+                    self.recv_switch();
+                elif (self.opp.currentPokemon.isDead() and not self.opp.check_has_remaining_pokemon()):
+                    self.deal_with_win();
+                    break;
+              
     
-print "Choose an option:\n\t 1) Battle the Computer\n\t 2) Battle a friend over a network\n\n";
+print "Choose an option:\n\t 1) Battle the Computer\n\t 2) Battle a friend over a network";
 option = input("Your choice: ");
-print;
 
 if option == 1:
     game = Game();
@@ -213,16 +354,15 @@ if option == 1:
     game.run_main_loop();
 elif option == 2:
     game = NetworkedGame();
-    print "Choose an option:\n\t 1) Initiate Connection\n\t 2)Wait on connection from other player\n";
+    print "Choose an option:\n\t 1) Initiate Connection\n\t 2) Wait on connection from other player";
     net_opt = input("Your choice: ");
-    print;
     if net_opt == 1:
         IP = raw_input("Enter opponent's IP address: ");
         port = input("Enter port opponent is listening on: ");
         game.initiate_connection(IP, port);
-        print;
     elif net_opt == 2:
         port = input("Enter port to listen for opponent on: ");
         game.wait_for_connection(port);
+    game.run_main_loop();
     
     
