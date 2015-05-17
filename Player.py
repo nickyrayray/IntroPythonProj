@@ -5,9 +5,7 @@ Created on Sat May 16 08:50:23 2015
 @author: nfalba
 """
 
-import Pokemon;
 import random;
-import copy;
 
 class Player:
     def __init__(self, name):
@@ -32,14 +30,16 @@ class Player:
     def remove_pokemon(self, p):
         for i in range(0, len(self.pokemon)):
             if p is self.pokemon[i]:
-                self.pokemon.pop(i);
+                ind_to_rem = i;
+        self.pokemon.pop(ind_to_rem);
     
     def remove_pokemon_and_add_new_current(self, p, choice):
         for i in range(0, len(self.pokemon)):
             if p is self.pokemon[i]:
-                self.pokemon.pop(i);
+                choice_to_pop = i;
             if choice == self.pokemon[i].name:
                 self.currentPokemon = self.pokemon[i];
+        self.pokemon.pop(choice_to_pop);
     
     def choosePokemon(self, pokemon_name):
         for i in range(0, len(self.pokemon)):

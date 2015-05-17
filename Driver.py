@@ -61,7 +61,7 @@ class Game:
     
     def displayStatus(self):
         opp_string = "Opponent: " + self.opp.name + "\n";
-        opp_string += "Number of remaining Pokemon: " + str(len(self.opp.pokemon)-1) + "\n";
+        opp_string += "Number of remaining Pokemon: " + str(len(self.opp.pokemon)) + "\n";
         opp_string += "Current Pokemon: " + self.opp.currentPokemon.opp_display_str() + "\n";
         s = "Battle Summary: \n\n" + opp_string + "\n";
         play_string = "Player: " + self.player.name + "\n";
@@ -147,6 +147,7 @@ class Game:
             if self.player.pokemon_in_list(choice):
                 self.player.remove_pokemon_and_add_new_current(prev, choice);
                 print "\nYou chose: %s" % choice;
+                break;
             else:
                 print "You don't have that Pokemon! Select again!";
     
@@ -198,7 +199,7 @@ class NetworkedGame(Game):
         
         sl = s.split('\n');
         
-        self.opp = Player.Player(sl[1]);
+        self.opp = Player.Player(sl[0]);
         for i in range(1, len(sl)-1):
             self.opp.addPokemon(copy.deepcopy(pokemon[sl[i]]));
         self.opp.choosePokemon(sl[len(sl)-1]);
