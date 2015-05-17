@@ -150,7 +150,7 @@ all_moves[solar_beam.name] = solar_beam;
 growl = StatMove("Growl", 3, 0.9, Constants.STAT_MOVE_DEC_ATTACK);
 tail_whip = StatMove("Tail Whip", 3, 0.9, Constants.STAT_MOVE_DEC_DEFENSE);
 focus_energy = StatMove("Focus Energy", 3, 1.0, Constants.STAT_MOVE_INC_ATTACK);
-harden = StatMove("Harden", 3, 1.0, Constants.STAT_MOVE_DEC_ATTACK);
+harden = StatMove("Harden", 3, 1.0, Constants.STAT_MOVE_INC_DEFENSE);
 
 all_moves[growl.name] = growl;
 all_moves[tail_whip.name] = tail_whip;

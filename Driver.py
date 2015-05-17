@@ -38,7 +38,7 @@ class Game:
             print("Choose Pokemon from the list by typing in the name.\n");
             Pokemon.displayAllPokemon(pokemon);
             while True:
-                choice = raw_input("Type your choice or a move to hear more about it: ");
+                choice = raw_input("Type your choice for a Pokemon, or the name of a move to hear more about it: ");
                 if choice in pokemon:
                     self.player.addPokemon(copy.deepcopy(pokemon[choice]));
                     break;
@@ -74,7 +74,7 @@ class Game:
         play_string += "\n";
         play_string += "Current Pokemon: " + str(self.player.currentPokemon);
         s += play_string;
-        expl_string = "Choose to use your move by attacking or switching Pokemon.\n";
+        expl_string = "Choose to use your turn by attacking or switching Pokemon.\n";
         expl_string += "To use an attack, type the name of an attack of your current Pokemon.\n";
         expl_string += "To switch pokemon, type the name of one of your remaining pokemon that you would like to switch to.";
         s += expl_string;
